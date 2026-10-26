@@ -163,6 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f7d7ea1e88ae74d99ce79a6ae71a8a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GroundPlanePlacementActuator
+  _planeFinder: {fileID: 0}
   _anchorStage: {fileID: 1375160333}
 --- !u!4 &46334103
 Transform:
@@ -1069,7 +1070,7 @@ MonoBehaviour:
   m_Script: {fileID: 2020821747, guid: 8a9a760f95896c34689febc965510927, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Vuforia.Unity.Engine.dll::Vuforia.ContentPositioningBehaviour
-  AnchorStage: {fileID: 0}
+  AnchorStage: {fileID: 1375160332}
   DuplicateStage: 0
   OnContentPlaced:
     m_PersistentCalls:
