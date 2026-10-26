@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <QCARConfig>
   <Tracking>
+    <ImageTarget name="t_target_purle" size="0.150000 0.083789" />
+    <ImageTarget name="t_target_red" size="0.150000 0.083789" />
     <ImageTarget name="t_target" size="0.150000 0.083789" />
   </Tracking>
 </QCARConfig>

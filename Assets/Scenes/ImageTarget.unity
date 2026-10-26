@@ -152,7 +152,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Vuforia.Unity.Engine.dll::Vuforia.ImageTargetPreview
   mObserverBehaviour: {fileID: 12555779}
   mHiddenRoot: {fileID: 0}
-  mTargetName: t_target
+  mTargetName: t_target_red
   mDatasetName: Vuforia/Tracker.xml
   mCastedBehaviour: {fileID: 12555779}
   mMeshFilter: {fileID: 0}
@@ -288,13 +288,13 @@ MonoBehaviour:
   PreviewVisible: 1
   RuntimeOcclusion: 0
   RuntimeCollider: 0
-  mTrackableName: t_target
+  mTrackableName: t_target_red
   mInitializedInEditor: 1
   mDataSetPath: Vuforia/Tracker.xml
   mAspectRatio: 0.5585933
   mImageTargetType: 0
   mWidth: 0.15
-  mHeight: 0.08378899
+  mHeight: 0.083789
   mRuntimeTexture: {fileID: 0}
   mMotionHint: 1
   mTrackingOptimization: 0
@@ -1137,7 +1137,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Vuforia.Unity.Engine.dll::Vuforia.ImageTargetPreview
   mObserverBehaviour: {fileID: 1175492470}
   mHiddenRoot: {fileID: 0}
-  mTargetName: t_target
+  mTargetName: t_target_purle
   mDatasetName: Vuforia/Tracker.xml
   mCastedBehaviour: {fileID: 1175492470}
   mMeshFilter: {fileID: 0}
@@ -1273,13 +1273,13 @@ MonoBehaviour:
   PreviewVisible: 1
   RuntimeOcclusion: 0
   RuntimeCollider: 0
-  mTrackableName: t_target
+  mTrackableName: t_target_purle
   mInitializedInEditor: 1
   mDataSetPath: Vuforia/Tracker.xml
   mAspectRatio: 0.5585933
   mImageTargetType: 0
   mWidth: 0.15
-  mHeight: 0.08378899
+  mHeight: 0.083789
   mRuntimeTexture: {fileID: 0}
   mMotionHint: 1
   mTrackingOptimization: 0
