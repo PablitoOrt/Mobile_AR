@@ -1,14 +1,24 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Linq;
-using UnityEditor;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+[DisallowMultipleComponent]
 public class HubMenuController : MonoBehaviour
 {
-    [SerializeField] private SceneAsset exercise1Scene;
-    [SerializeField] private SceneAsset exercise2Scene;
-    [SerializeField, HideInInspector] private string exercise1SceneName;
-    [SerializeField, HideInInspector] private string exercise2SceneName;
+#if UNITY_EDITOR
+    [Header("Configuración en Editor")]
+    [SerializeField] private SceneAsset exercise1SceneAsset;
+    [SerializeField] private SceneAsset exercise2SceneAsset;
+#endif
+
+    [Header("Identificadores de Escena")]
+    [SerializeField] private string exercise1SceneName = "Exercise1";
+    [SerializeField] private string exercise2SceneName = "Exercise2";
+
+    [Header("Paneles de Interfaz")]
     [SerializeField] private GameObject mainCanvas;
     [SerializeField] private GameObject creditsCanvas;
 
@@ -19,56 +29,49 @@ public class HubMenuController : MonoBehaviour
 
     public void LoadExercise1()
     {
-        LoadScene(exercise1SceneName);
+        ExecuteSceneLoad(exercise1SceneName);
     }
 
     public void LoadExercise2()
     {
-        LoadScene(exercise2SceneName);
+        ExecuteSceneLoad(exercise2SceneName);
     }
 
     public void ShowCredits()
     {
-        mainCanvas.SetActive(false);
-        creditsCanvas.SetActive(true);
+        if (mainCanvas != null) mainCanvas.SetActive(false);
+        if (creditsCanvas != null) creditsCanvas.SetActive(true);
     }
 
     public void ShowMain()
     {
-        creditsCanvas.SetActive(false);
-        mainCanvas.SetActive(true);
+        if (creditsCanvas != null) creditsCanvas.SetActive(false);
+        if (mainCanvas != null) mainCanvas.SetActive(true);
     }
 
-    private void LoadScene(string sceneName)
+    private void ExecuteSceneLoad(string targetScene)
     {
-        if (string.IsNullOrEmpty(sceneName)) return;
-        SceneManager.LoadScene(sceneName);
+        if (string.IsNullOrEmpty(targetScene))
+        {
+            Debug.LogWarning("[HubMenuController] La escena destino no está configurada.", this);
+            return;
+        }
+
+        SceneManager.LoadScene(targetScene);
     }
 
+#if UNITY_EDITOR
     private void OnValidate()
     {
-        exercise1SceneName = exercise1Scene != null ? exercise1Scene.name : string.Empty;
-        exercise2SceneName = exercise2Scene != null ? exercise2Scene.name : string.Empty;
-        AddToBuildSettings(exercise1Scene);
-        AddToBuildSettings(exercise2Scene);
-    }
-
-    private static void AddToBuildSettings(SceneAsset scene)
-    {
-        if (scene == null) return;
-
-        string path = AssetDatabase.GetAssetPath(scene);
-        var scenes = EditorBuildSettings.scenes.ToList();
-        var existing = scenes.FirstOrDefault(s => s.path == path);
-        if (existing != null)
+        if (exercise1SceneAsset != null)
         {
-            if (existing.enabled) return;
-            existing.enabled = true;
+            exercise1SceneName = exercise1SceneAsset.name;
         }
-        else
+
+        if (exercise2SceneAsset != null)
         {
-            scenes.Add(new EditorBuildSettingsScene(path, true));
+            exercise2SceneName = exercise2SceneAsset.name;
         }
-        EditorBuildSettings.scenes = scenes.ToArray();
     }
+#endif
 }

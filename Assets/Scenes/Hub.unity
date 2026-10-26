@@ -964,8 +964,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4d1a16f93f922b4cb7de76915c38fd6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HubMenuController
-  exercise1Scene: {fileID: 102900000, guid: 99c9720ab356a0642a771bea13969a05, type: 3}
-  exercise2Scene: {fileID: 102900000, guid: f3b82cba73f364647873927319c01ec8, type: 3}
+  exercise1SceneAsset: {fileID: 102900000, guid: 99c9720ab356a0642a771bea13969a05, type: 3}
+  exercise2SceneAsset: {fileID: 102900000, guid: f3b82cba73f364647873927319c01ec8, type: 3}
   exercise1SceneName: ImageTarget
   exercise2SceneName: GroundPlane
   mainCanvas: {fileID: 1776642429}
