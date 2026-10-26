@@ -31,11 +31,7 @@ public class BackToHubButton : MonoBehaviour
 
     public void LoadHub()
     {
-        if (string.IsNullOrEmpty(hubSceneName))
-        {
-            Debug.LogWarning("BackToHubButton: no hay escena del Hub asignada.", this);
-            return;
-        }
+        if (string.IsNullOrEmpty(hubSceneName)) return;
         SceneManager.LoadScene(hubSceneName);
     }
 

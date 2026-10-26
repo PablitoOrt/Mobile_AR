@@ -2,10 +2,6 @@ using TMPro;
 using UnityEngine;
 using Vuforia;
 
-/// <summary>
-/// Muestra en pantalla el estado del tracking del dispositivo y si se está detectando el piso,
-/// para poder diagnosticar en el celular por qué no aparece el indicador.
-/// </summary>
 public class GroundPlaneStatusUI : MonoBehaviour
 {
     [SerializeField] private PlaneFinderBehaviour _planeFinder;

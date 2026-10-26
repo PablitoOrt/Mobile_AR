@@ -23,9 +23,7 @@ public class PlacementCatalogService : MonoBehaviour
         Instance = this;
 
         if (_catalog != null && _catalog.Length > 0)
-        {
             CurrentItem = _catalog[0];
-        }
     }
 
     public void SelectItemByIndex(int index)

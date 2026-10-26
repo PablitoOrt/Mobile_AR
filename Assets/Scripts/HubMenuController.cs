@@ -1,16 +1,12 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-#if UNITY_EDITOR
 using System.Linq;
 using UnityEditor;
-#endif
 
 public class HubMenuController : MonoBehaviour
 {
-#if UNITY_EDITOR
     [SerializeField] private SceneAsset exercise1Scene;
     [SerializeField] private SceneAsset exercise2Scene;
-#endif
     [SerializeField, HideInInspector] private string exercise1SceneName;
     [SerializeField, HideInInspector] private string exercise2SceneName;
     [SerializeField] private GameObject mainCanvas;
@@ -45,15 +41,10 @@ public class HubMenuController : MonoBehaviour
 
     private void LoadScene(string sceneName)
     {
-        if (string.IsNullOrEmpty(sceneName))
-        {
-            Debug.LogWarning("HubMenuController: no hay escena asignada.", this);
-            return;
-        }
+        if (string.IsNullOrEmpty(sceneName)) return;
         SceneManager.LoadScene(sceneName);
     }
 
-#if UNITY_EDITOR
     private void OnValidate()
     {
         exercise1SceneName = exercise1Scene != null ? exercise1Scene.name : string.Empty;
@@ -64,20 +55,14 @@ public class HubMenuController : MonoBehaviour
 
     private static void AddToBuildSettings(SceneAsset scene)
     {
-        if (scene == null)
-        {
-            return;
-        }
+        if (scene == null) return;
 
         string path = AssetDatabase.GetAssetPath(scene);
         var scenes = EditorBuildSettings.scenes.ToList();
         var existing = scenes.FirstOrDefault(s => s.path == path);
         if (existing != null)
         {
-            if (existing.enabled)
-            {
-                return;
-            }
+            if (existing.enabled) return;
             existing.enabled = true;
         }
         else
@@ -86,5 +71,4 @@ public class HubMenuController : MonoBehaviour
         }
         EditorBuildSettings.scenes = scenes.ToArray();
     }
-#endif
 }

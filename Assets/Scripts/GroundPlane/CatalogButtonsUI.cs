@@ -3,10 +3,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Crea un botón por cada ítem del catálogo usando un botón de la escena como plantilla,
-/// y resalta el ítem seleccionado.
-/// </summary>
 public class CatalogButtonsUI : MonoBehaviour
 {
     [SerializeField] private Button _buttonTemplate;
@@ -19,11 +15,7 @@ public class CatalogButtonsUI : MonoBehaviour
     private void Start()
     {
         PlacementCatalogService catalog = PlacementCatalogService.Instance;
-        if (catalog == null || _buttonTemplate == null)
-        {
-            Debug.LogError("[CatalogButtonsUI] Falta el PlacementCatalogService o el botón plantilla.");
-            return;
-        }
+        if (catalog == null || _buttonTemplate == null) return;
 
         for (int i = 0; i < catalog.Catalog.Count; i++)
         {
