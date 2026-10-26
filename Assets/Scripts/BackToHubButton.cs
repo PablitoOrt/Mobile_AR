@@ -1,10 +1,6 @@
-using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 [DisallowMultipleComponent]
 public class BackToHubButton : MonoBehaviour
@@ -29,33 +25,20 @@ public class BackToHubButton : MonoBehaviour
 
         var keyboard = Keyboard.current;
         if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
-        {
             NavigateToTarget();
-        }
     }
 
-    /// <summary>
-    /// Invocar desde el evento OnClick() de cualquier Button nativo de tu Canvas en escena.
-    /// </summary>
     public void NavigateToTarget()
     {
         if (loadMode == LoadMode.ByName)
         {
-            if (string.IsNullOrEmpty(targetSceneName))
-            {
-                Debug.LogWarning("[SceneNavigation] 'targetSceneName' está vacío.", this);
-                return;
-            }
+            if (string.IsNullOrEmpty(targetSceneName)) return;
 
             SceneManager.LoadScene(targetSceneName);
         }
         else
         {
-            if (targetSceneIndex < 0 || targetSceneIndex >= SceneManager.sceneCountInBuildSettings)
-            {
-                Debug.LogWarning($"[SceneNavigation] Índice {targetSceneIndex} fuera de rango en Build Settings.", this);
-                return;
-            }
+            if (targetSceneIndex < 0 || targetSceneIndex >= SceneManager.sceneCountInBuildSettings) return;
 
             SceneManager.LoadScene(targetSceneIndex);
         }

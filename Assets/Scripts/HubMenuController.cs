@@ -51,11 +51,7 @@ public class HubMenuController : MonoBehaviour
 
     private void ExecuteSceneLoad(string targetScene)
     {
-        if (string.IsNullOrEmpty(targetScene))
-        {
-            Debug.LogWarning("[HubMenuController] La escena destino no está configurada.", this);
-            return;
-        }
+        if (string.IsNullOrEmpty(targetScene)) return;
 
         SceneManager.LoadScene(targetScene);
     }
