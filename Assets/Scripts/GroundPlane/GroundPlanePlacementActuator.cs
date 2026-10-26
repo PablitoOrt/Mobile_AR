@@ -1,109 +1,95 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using Vuforia;
 
 public class GroundPlanePlacementActuator : MonoBehaviour
 {
-    [SerializeField] private PlaneFinderBehaviour _planeFinder;
-    [SerializeField] private Transform _anchorStage;
+    [SerializeField] private bool _faceCamera = true;
 
-    private readonly Dictionary<string, GameObject> _instancesPool = new(8);
-    private GameObject _currentActiveObject;
-
-    private void Awake()
-    {
-        if (_planeFinder == null)
-        {
-            _planeFinder = Object.FindAnyObjectByType<PlaneFinderBehaviour>();
-            if (_planeFinder != null)
-            {
-                Debug.Log("[GroundPlaneActuator] PlaneFinderBehaviour auto-enlazado con éxito.");
-            }
-            else
-            {
-                Debug.LogError("[GroundPlaneActuator] CRÍTICO: No se encontró 'PlaneFinderBehaviour' en la escena.");
-            }
-        }
-
-        if (_anchorStage == null)
-        {
-            var anchor = Object.FindAnyObjectByType<AnchorBehaviour>();
-            if (anchor != null)
-            {
-                _anchorStage = anchor.transform;
-                Debug.Log($"[GroundPlaneActuator] AnchorStage auto-enlazado a: {anchor.name}");
-            }
-            else
-            {
-                Debug.LogError("[GroundPlaneActuator] CRÍTICO: No se encontró 'AnchorBehaviour' (Ground Plane Stage) en la escena.");
-            }
-        }
-    }
+    private readonly List<GameObject> _placedObjects = new(16);
+    private readonly List<RaycastResult> _uiHits = new(8);
 
     /// <summary>
-    /// Enlazar este método en el Inspector a 'On Interactive Hit Test (HitTestResult)' del PlaneFinder
+    /// Enlazar este mÃ©todo en el Inspector a 'On Interactive Hit Test' del PlaneFinder (secciÃ³n Dynamic HitTestResult).
+    /// Cada toque coloca una nueva instancia del Ã­tem seleccionado; los anteriores quedan en su lugar.
     /// </summary>
     public void PlaceOrUpdateObject(HitTestResult result)
     {
-        Debug.Log($"<color=cyan>[GroundPlaneActuator]</color> Tap recibido. Pose detectada en posición: {result.Position}");
+        if (result == null || IsPointerOverUI())
+            return;
 
         if (PlacementCatalogService.Instance == null)
         {
-            Debug.LogError("[GroundPlaneActuator] Error: No existe instancia activa de 'PlacementCatalogService' en la escena.");
+            Debug.LogError("[GroundPlaneActuator] No existe una instancia de 'PlacementCatalogService' en la escena.");
             return;
         }
 
         PlaceableItemData itemData = PlacementCatalogService.Instance.CurrentItem;
-        if (itemData == null)
+        if (itemData == null || itemData.Prefab == null)
         {
-            Debug.LogError("[GroundPlaneActuator] Error: 'CurrentItem' en PlacementCatalogService es nulo. Revisa la lista del catálogo.");
+            Debug.LogError("[GroundPlaneActuator] El Ã­tem seleccionado no tiene Prefab asignado.");
             return;
         }
 
-        if (itemData.Prefab == null)
-        {
-            Debug.LogError($"[GroundPlaneActuator] Error: El ítem '{itemData.ItemID}' no tiene Prefab asignado en su ScriptableObject.");
-            return;
-        }
+        Quaternion rotation = _faceCamera ? RotationFacingCamera(result.Position) : result.Rotation;
+        AnchorBehaviour anchor = VuforiaBehaviour.Instance.ObserverFactory
+            .CreateAnchorBehaviour($"Anchor_{itemData.ItemID}_{_placedObjects.Count}", result);
 
-        // Ocultar objeto previo
-        if (_currentActiveObject != null)
+        GameObject instance;
+        if (anchor != null)
         {
-            _currentActiveObject.SetActive(false);
-        }
-
-        // Recuperar del pool o instanciar
-        if (!_instancesPool.TryGetValue(itemData.ItemID, out GameObject instance) || instance == null)
-        {
-            Transform parent = _anchorStage != null ? _anchorStage : transform;
-            instance = Instantiate(itemData.Prefab, parent);
-            _instancesPool[itemData.ItemID] = instance;
-            Debug.Log($"<color=yellow>[GroundPlaneActuator]</color> Instanciado nuevo prefab: '{itemData.ItemID}' bajo '{parent.name}'.");
+            // El anchor toma la pose del hit test, asÃ­ que el objeto va en el origen local del anchor
+            instance = Instantiate(itemData.Prefab, anchor.transform);
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.Inverse(result.Rotation) * rotation;
+            _placedObjects.Add(anchor.gameObject);
         }
         else
         {
-            Debug.Log($"<color=green>[GroundPlaneActuator]</color> Reutilizando instancia cacheada de: '{itemData.ItemID}'.");
+            instance = Instantiate(itemData.Prefab, result.Position, rotation);
+            _placedObjects.Add(instance);
         }
 
-        _currentActiveObject = instance;
-        _currentActiveObject.transform.SetPositionAndRotation(result.Position, result.Rotation);
-        _currentActiveObject.transform.localScale = itemData.BaseScale;
-        _currentActiveObject.SetActive(true);
-
-        if (_currentActiveObject.TryGetComponent(out Animator animator))
-        {
-            animator.Rebind();
-            animator.Update(0f);
-        }
-
-        Debug.Log($"<color=green>[GroundPlaneActuator] ÉXITO:</color> Objeto '{itemData.ItemID}' posicionado en {result.Position}");
+        instance.transform.localScale = itemData.BaseScale;
     }
 
-    /// <summary>
-    /// Opcional: enlazar a 'On Automatic Hit Test' solo para verificar si Vuforia ve el piso
-    /// </summary>
-    public void DebugFloorTracking(HitTestResult result)
+    public void UndoLast()
     {
-        // Si entra acá, Vuforia confirmó que está viendo una superficie plana válida
+        if (_placedObjects.Count == 0)
+            return;
+
+        int last = _placedObjects.Count - 1;
+        if (_placedObjects[last] != null)
+            Destroy(_placedObjects[last]);
+        _placedObjects.RemoveAt(last);
+    }
+
+    public void ClearAll()
+    {
+        foreach (GameObject placed in _placedObjects)
+            if (placed != null)
+                Destroy(placed);
+        _placedObjects.Clear();
+    }
+
+    private Quaternion RotationFacingCamera(Vector3 position)
+    {
+        Vector3 toCamera = Camera.main.transform.position - position;
+        toCamera.y = 0f;
+        return toCamera.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(toCamera) : Quaternion.identity;
+    }
+
+    // Evita colocar un objeto cuando el toque fue sobre un botÃ³n de la UI
+    private bool IsPointerOverUI()
+    {
+        if (EventSystem.current == null || Pointer.current == null)
+            return false;
+
+        var eventData = new PointerEventData(EventSystem.current) { position = Pointer.current.position.ReadValue() };
+        _uiHits.Clear();
+        EventSystem.current.RaycastAll(eventData, _uiHits);
+        return _uiHits.Count > 0;
     }
 }

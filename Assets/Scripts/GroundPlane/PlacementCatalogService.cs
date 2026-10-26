@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlacementCatalogService : MonoBehaviour
@@ -7,6 +8,8 @@ public class PlacementCatalogService : MonoBehaviour
 
     [SerializeField] private PlaceableItemData[] _catalog;
 
+    public IReadOnlyList<PlaceableItemData> Catalog => _catalog;
+    public int CurrentIndex { get; private set; }
     public PlaceableItemData CurrentItem { get; private set; }
     public event Action<PlaceableItemData> OnSelectionChanged;
 
@@ -29,6 +32,7 @@ public class PlacementCatalogService : MonoBehaviour
     {
         if (index < 0 || _catalog == null || index >= _catalog.Length) return;
 
+        CurrentIndex = index;
         CurrentItem = _catalog[index];
         OnSelectionChanged?.Invoke(CurrentItem);
     }
