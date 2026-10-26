@@ -415,8 +415,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1743335176}
-        m_TargetAssemblyTypeName: ARGroundPlacementController, Assembly-CSharp
-        m_MethodName: SetModelIndex
+        m_TargetAssemblyTypeName: ARGroundPlacementManager, Assembly-CSharp
+        m_MethodName: SelectCatalogIndex
         m_Mode: 3
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -480,6 +480,14 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1498834950193305366, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.00607
+      objectReference: {fileID: 0}
+    - target: {fileID: 1498834950193305366, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.00012
+      objectReference: {fileID: 0}
     - target: {fileID: 3950890879569416838, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
       propertyPath: m_LocalScale.x
       value: 50
@@ -498,11 +506,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3950890879569416838, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.40000004
+      value: 0.42
       objectReference: {fileID: 0}
     - target: {fileID: 3950890879569416838, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.099999934
+      value: 0.09999993
       objectReference: {fileID: 0}
     - target: {fileID: 3950890879569416838, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
       propertyPath: m_LocalRotation.w
@@ -535,6 +543,22 @@ PrefabInstance:
     - target: {fileID: 3950890879569416838, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
       propertyPath: m_ConstrainProportionsScale
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5328677339748719545, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.00043
+      objectReference: {fileID: 0}
+    - target: {fileID: 5328677339748719545, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.00012
+      objectReference: {fileID: 0}
+    - target: {fileID: 7947837309460062770, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.00608
+      objectReference: {fileID: 0}
+    - target: {fileID: 7947837309460062770, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.00012
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -870,11 +894,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5093029756429133689, guid: 83b707cd7f2c24a4c81d7c1e39f724f6, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.3
+      value: 0.285
       objectReference: {fileID: 0}
     - target: {fileID: 5093029756429133689, guid: 83b707cd7f2c24a4c81d7c1e39f724f6, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -0.000000035768608
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 5093029756429133689, guid: 83b707cd7f2c24a4c81d7c1e39f724f6, type: 3}
       propertyPath: m_LocalRotation.w
@@ -1225,11 +1249,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1910e4f69281944418defb3b6a4fe3cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BackToHubButton
-  hubScene: {fileID: 102900000, guid: 570a8531bccb0c84da77c7ad2a93dc4d, type: 3}
-  hubSceneName: Hub
-  buttonText: < Hub
-  buttonSize: {x: 220, y: 90}
-  margin: {x: 30, y: 30}
+  loadMode: 0
+  targetSceneName: Hub
+  targetSceneIndex: 0
+  listenEscapeKey: 1
 --- !u!1 &1375160329
 GameObject:
   m_ObjectHideFlags: 0
@@ -1596,8 +1619,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1743335176}
-        m_TargetAssemblyTypeName: ARGroundPlacementController, Assembly-CSharp
-        m_MethodName: SetModelIndex
+        m_TargetAssemblyTypeName: ARGroundPlacementManager, Assembly-CSharp
+        m_MethodName: SelectCatalogIndex
         m_Mode: 3
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1761,14 +1784,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ARGroundPlacementController
   anchorStage: {fileID: 1375160333}
-  placeableDefinitions:
-  - displayName: Mesa
-    prefab: {fileID: 166212334983202314, guid: 92a2ed59b97fc4a438d156d5fc117bc0, type: 3}
-    baseScale: {x: 50, y: 50, z: 50}
-  - displayName: Silla
-    prefab: {fileID: 3658069667267236190, guid: 83b707cd7f2c24a4c81d7c1e39f724f6, type: 3}
-    baseScale: {x: 50, y: 50, z: 50}
-  initialIndex: 0
+  arCameraTransform: {fileID: 1449751118}
+  entityCatalog:
+  - config: {fileID: 11400000, guid: 78b2c6ef36d2b3643bad803524f81710, type: 2}
+    activeInstances: []
+    circularIndex: 0
+  - config: {fileID: 11400000, guid: ac05f46a64eaf394490eb24c2ad184e0, type: 2}
+    activeInstances: []
+    circularIndex: 0
+  defaultSelectedIndex: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

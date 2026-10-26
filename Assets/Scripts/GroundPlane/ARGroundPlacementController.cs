@@ -6,33 +6,30 @@ using Vuforia;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlaneFinderBehaviour))]
-public class ARGroundPlacementController : MonoBehaviour
+public class ARGroundPlacementManager : MonoBehaviour
 {
     [System.Serializable]
-    public struct PlaceableDefinition
+    public class EntityPoolRuntime
     {
-        public string displayName;
-        public GameObject prefab;
-        public Vector3 baseScale;
+        public PlaceableEntityConfig config;
+        [HideInInspector] public List<GameObject> activeInstances;
+        [HideInInspector] public int circularIndex;
     }
 
-    [Header("Referencias de Vuforia")]
+    [Header("Referencias")]
     [SerializeField] private Transform anchorStage;
+    [SerializeField] private Transform arCameraTransform;
 
-    [Header("Catálogo de Modelos")]
-    [SerializeField] private PlaceableDefinition[] placeableDefinitions;
-    [SerializeField] private int initialIndex = 0;
+    [Header("Catálogo Configurado")]
+    [SerializeField] private EntityPoolRuntime[] entityCatalog;
+    [SerializeField] private int defaultSelectedIndex = 0;
 
-    // Buffer estático para el raycast de UI sin generar Garbage Collection
+    // Buffer estático para el raycast de UI sin allocations en memoria
     private static readonly List<RaycastResult> S_UiRaycastResults = new(16);
     private static PointerEventData s_CachedPointerData;
 
     private PlaneFinderBehaviour _planeFinder;
-    private GameObject[] _instantiatedPool;
-    private int _currentIndex = -1;
-    private GameObject _currentActiveInstance;
-    private Pose _lastPlacedPose;
-    private bool _hasPlacedAtLeastOnce;
+    private int _currentSelectionIndex;
 
     private void Awake()
     {
@@ -44,19 +41,31 @@ public class ARGroundPlacementController : MonoBehaviour
             if (anchor != null) anchorStage = anchor.transform;
         }
 
-        if (placeableDefinitions != null && placeableDefinitions.Length > 0)
+        if (arCameraTransform == null && Camera.main != null)
         {
-            _instantiatedPool = new GameObject[placeableDefinitions.Length];
-            _currentIndex = Mathf.Clamp(initialIndex, 0, placeableDefinitions.Length - 1);
+            arCameraTransform = Camera.main.transform;
         }
+
+        // Inicializar los pools de instancias por categoría
+        if (entityCatalog != null)
+        {
+            for (int i = 0; i < entityCatalog.Length; i++)
+            {
+                int capacity = Mathf.Max(1, entityCatalog[i].config.MaxAllowedInstances);
+                entityCatalog[i].activeInstances = new List<GameObject>(capacity);
+                entityCatalog[i].circularIndex = 0;
+            }
+        }
+
+        _currentSelectionIndex = Mathf.Clamp(defaultSelectedIndex, 0, (entityCatalog?.Length ?? 1) - 1);
     }
 
     private void OnEnable()
     {
         if (_planeFinder != null)
         {
-            _planeFinder.OnInteractiveHitTest.RemoveListener(OnVuforiaHitTestResult);
-            _planeFinder.OnInteractiveHitTest.AddListener(OnVuforiaHitTestResult);
+            _planeFinder.OnInteractiveHitTest.RemoveListener(OnVuforiaHitTest);
+            _planeFinder.OnInteractiveHitTest.AddListener(OnVuforiaHitTest);
         }
     }
 
@@ -64,7 +73,7 @@ public class ARGroundPlacementController : MonoBehaviour
     {
         if (_planeFinder != null)
         {
-            _planeFinder.OnInteractiveHitTest.RemoveListener(OnVuforiaHitTestResult);
+            _planeFinder.OnInteractiveHitTest.RemoveListener(OnVuforiaHitTest);
         }
     }
 
@@ -75,19 +84,13 @@ public class ARGroundPlacementController : MonoBehaviour
 
     private void EvaluateInput()
     {
-        // Touchscreen primario en móvil
         var touchscreen = Touchscreen.current;
-        if (touchscreen != null)
+        if (touchscreen != null && touchscreen.primaryTouch.press.wasPressedThisFrame)
         {
-            var touch = touchscreen.primaryTouch;
-            if (touch.press.wasPressedThisFrame)
-            {
-                ProcessTap(touch.position.ReadValue());
-                return;
-            }
+            ProcessTap(touchscreen.primaryTouch.position.ReadValue());
+            return;
         }
 
-        // Pointer fallback para pruebas en Editor
         var pointer = Pointer.current;
         if (pointer != null && pointer.press.wasPressedThisFrame)
         {
@@ -95,83 +98,79 @@ public class ARGroundPlacementController : MonoBehaviour
         }
     }
 
-    private void ProcessTap(Vector2 screenPosition)
+    private void ProcessTap(Vector2 screenPos)
     {
-        if (IsPointerOverUI(screenPosition)) return;
+        if (IsPointerOverUI(screenPos)) return;
 
         if (_planeFinder != null)
         {
-            _planeFinder.PerformHitTest(screenPosition);
+            _planeFinder.PerformHitTest(screenPos);
         }
     }
 
-    private void OnVuforiaHitTestResult(HitTestResult result)
+    private void OnVuforiaHitTest(HitTestResult result)
     {
-        _lastPlacedPose = new Pose(result.Position, result.Rotation);
-        _hasPlacedAtLeastOnce = true;
-        ApplyPlacement(_lastPlacedPose);
-    }
+        if (entityCatalog == null || _currentSelectionIndex >= entityCatalog.Length) return;
 
-    private void ApplyPlacement(Pose targetPose)
-    {
-        if (_currentIndex < 0 || _currentIndex >= placeableDefinitions.Length) return;
+        EntityPoolRuntime pool = entityCatalog[_currentSelectionIndex];
+        PlaceableEntityConfig cfg = pool.config;
 
-        PlaceableDefinition def = placeableDefinitions[_currentIndex];
-        if (def.prefab == null) return;
+        if (cfg == null || cfg.Prefab == null) return;
 
-        // Ocultar la instancia activa previa
-        if (_currentActiveInstance != null)
+        // 1. Cálculo de Posición con corrección de elevación sobre el plano
+        Vector3 finalPosition = result.Position + (result.Rotation * cfg.PositionOffset);
+
+        // 2. Cálculo de Rotación (Corrección de FBX + Alineación con la Cámara)
+        Quaternion finalRotation = result.Rotation * Quaternion.Euler(cfg.RotationOffsetEuler);
+
+        if (cfg.AlignWithCameraYaw && arCameraTransform != null)
         {
-            _currentActiveInstance.SetActive(false);
+            Vector3 cameraDirection = finalPosition - arCameraTransform.position;
+            cameraDirection.y = 0f; // Anular inclinación vertical (Pitch)
+
+            if (cameraDirection.sqrMagnitude > 0.001f)
+            {
+                Quaternion lookRotation = Quaternion.LookRotation(cameraDirection.normalized, Vector3.up);
+                finalRotation = lookRotation * Quaternion.Euler(cfg.RotationOffsetEuler);
+            }
         }
 
-        // Instanciar solo si no existe en el pool
-        if (_instantiatedPool[_currentIndex] == null)
+        // 3. Resolución de Cuotas (1 Mesa, 2 Sillas)
+        GameObject targetInstance;
+
+        if (pool.activeInstances.Count < cfg.MaxAllowedInstances)
         {
+            // Aún no alcanzamos el límite: instanciamos y registramos
             Transform parent = anchorStage != null ? anchorStage : transform;
-            _instantiatedPool[_currentIndex] = Instantiate(def.prefab, targetPose.position, targetPose.rotation, parent);
+            targetInstance = Instantiate(cfg.Prefab, finalPosition, finalRotation, parent);
+            pool.activeInstances.Add(targetInstance);
+        }
+        else
+        {
+            // Límite alcanzado: reciclamos la instancia más antigua (política FIFO)
+            targetInstance = pool.activeInstances[pool.circularIndex];
+            targetInstance.transform.SetPositionAndRotation(finalPosition, finalRotation);
+            pool.circularIndex = (pool.circularIndex + 1) % cfg.MaxAllowedInstances;
         }
 
-        GameObject targetObj = _instantiatedPool[_currentIndex];
-        targetObj.transform.SetPositionAndRotation(targetPose.position, targetPose.rotation);
-        targetObj.transform.localScale = def.baseScale != Vector3.zero ? def.baseScale : Vector3.one;
-        targetObj.SetActive(true);
+        targetInstance.transform.localScale = cfg.LocalScale;
+        targetInstance.SetActive(true);
 
-        _currentActiveInstance = targetObj;
-
-        // Reinicio del árbol de animación para mallas esqueléticas
-        if (_currentActiveInstance.TryGetComponent(out Animator anim))
+        // Resetear animadores si existen en el modelo
+        if (targetInstance.TryGetComponent(out Animator anim))
         {
             anim.Rebind();
             anim.Update(0f);
         }
-        else
-        {
-            // Búsqueda en hijos si el Animator está en el sub-nodo de la malla
-            var childAnim = _currentActiveInstance.GetComponentInChildren<Animator>();
-            if (childAnim != null)
-            {
-                childAnim.Rebind();
-                childAnim.Update(0f);
-            }
-        }
     }
 
     /// <summary>
-    /// Invocar desde los botones de la UI (ej. OnClick -> SetModelIndex(0), SetModelIndex(1))
+    /// Invocar desde los eventos OnClick() de la UI.
     /// </summary>
-    public void SetModelIndex(int newIndex)
+    public void SelectCatalogIndex(int index)
     {
-        if (newIndex < 0 || newIndex >= placeableDefinitions.Length) return;
-        if (newIndex == _currentIndex) return;
-
-        _currentIndex = newIndex;
-
-        // Si ya hay un anclaje colocado en el suelo, permutar el modelo inmediatamente en la misma posición
-        if (_hasPlacedAtLeastOnce)
-        {
-            ApplyPlacement(_lastPlacedPose);
-        }
+        if (index < 0 || entityCatalog == null || index >= entityCatalog.Length) return;
+        _currentSelectionIndex = index;
     }
 
     private bool IsPointerOverUI(Vector2 screenPosition)
