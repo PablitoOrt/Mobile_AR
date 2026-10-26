@@ -8,53 +8,46 @@ using Vuforia;
 [RequireComponent(typeof(PlaneFinderBehaviour))]
 public class ARGroundPlacementController : MonoBehaviour
 {
-    public enum PlaceableObjectType : byte
-    {
-        Cube = 0,
-        Sphere = 1
-    }
-
     [System.Serializable]
     public struct PlaceableDefinition
     {
-        public PlaceableObjectType type;
+        public string displayName;
         public GameObject prefab;
-        public Vector3 localScale;
+        public Vector3 baseScale;
     }
 
     [Header("Referencias de Vuforia")]
     [SerializeField] private Transform anchorStage;
 
-    [Header("Definición de Modelos (Zero Lookup)")]
+    [Header("Catálogo de Modelos")]
     [SerializeField] private PlaceableDefinition[] placeableDefinitions;
-    [SerializeField] private PlaceableObjectType defaultObjectType = PlaceableObjectType.Cube;
+    [SerializeField] private int initialIndex = 0;
 
-    // Buffer estático reutilizable para Raycasting de UI sin Garbage Collection
+    // Buffer estático para el raycast de UI sin generar Garbage Collection
     private static readonly List<RaycastResult> S_UiRaycastResults = new(16);
     private static PointerEventData s_CachedPointerData;
 
     private PlaneFinderBehaviour _planeFinder;
-    private PlaceableObjectType _currentObjectType;
-    private int _placedObjectsCounter;
-
-    public PlaceableObjectType CurrentType => _currentObjectType;
+    private GameObject[] _instantiatedPool;
+    private int _currentIndex = -1;
+    private GameObject _currentActiveInstance;
+    private Pose _lastPlacedPose;
+    private bool _hasPlacedAtLeastOnce;
 
     private void Awake()
     {
         _planeFinder = GetComponent<PlaneFinderBehaviour>();
-        _currentObjectType = defaultObjectType;
 
         if (anchorStage == null)
         {
             var anchor = Object.FindAnyObjectByType<AnchorBehaviour>();
-            if (anchor != null)
-            {
-                anchorStage = anchor.transform;
-            }
-            else
-            {
-                Debug.LogError("[ARPlacement] No se encontró AnchorBehaviour en la escena.");
-            }
+            if (anchor != null) anchorStage = anchor.transform;
+        }
+
+        if (placeableDefinitions != null && placeableDefinitions.Length > 0)
+        {
+            _instantiatedPool = new GameObject[placeableDefinitions.Length];
+            _currentIndex = Mathf.Clamp(initialIndex, 0, placeableDefinitions.Length - 1);
         }
     }
 
@@ -77,34 +70,32 @@ public class ARGroundPlacementController : MonoBehaviour
 
     private void Update()
     {
-        EvaluateTouchInput();
+        EvaluateInput();
     }
 
-    private void EvaluateTouchInput()
+    private void EvaluateInput()
     {
-        // Polling determinista sin eventos de callback
+        // Touchscreen primario en móvil
         var touchscreen = Touchscreen.current;
         if (touchscreen != null)
         {
             var touch = touchscreen.primaryTouch;
             if (touch.press.wasPressedThisFrame)
             {
-                Vector2 touchPosition = touch.position.ReadValue();
-                ProcessPointerInteraction(touchPosition);
+                ProcessTap(touch.position.ReadValue());
                 return;
             }
         }
 
-        // Fallback de PC / Editor con Pointer / Mouse
+        // Pointer fallback para pruebas en Editor
         var pointer = Pointer.current;
         if (pointer != null && pointer.press.wasPressedThisFrame)
         {
-            Vector2 pointerPosition = pointer.position.ReadValue();
-            ProcessPointerInteraction(pointerPosition);
+            ProcessTap(pointer.position.ReadValue());
         }
     }
 
-    private void ProcessPointerInteraction(Vector2 screenPosition)
+    private void ProcessTap(Vector2 screenPosition)
     {
         if (IsPointerOverUI(screenPosition)) return;
 
@@ -116,60 +107,71 @@ public class ARGroundPlacementController : MonoBehaviour
 
     private void OnVuforiaHitTestResult(HitTestResult result)
     {
-        PlaceSelectedObject(result.Position, result.Rotation);
+        _lastPlacedPose = new Pose(result.Position, result.Rotation);
+        _hasPlacedAtLeastOnce = true;
+        ApplyPlacement(_lastPlacedPose);
     }
 
-    private void PlaceSelectedObject(Vector3 position, Quaternion rotation)
+    private void ApplyPlacement(Pose targetPose)
     {
-        PlaceableDefinition definition = GetDefinition(_currentObjectType);
+        if (_currentIndex < 0 || _currentIndex >= placeableDefinitions.Length) return;
 
-        if (definition.prefab == null)
+        PlaceableDefinition def = placeableDefinitions[_currentIndex];
+        if (def.prefab == null) return;
+
+        // Ocultar la instancia activa previa
+        if (_currentActiveInstance != null)
         {
-            Debug.LogError($"[ARPlacement] Error: Prefab no asignado para el tipo {_currentObjectType}");
-            return;
+            _currentActiveInstance.SetActive(false);
         }
 
-        Transform targetParent = anchorStage != null ? anchorStage : transform;
-        GameObject spawned = Instantiate(definition.prefab, position, rotation, targetParent);
-
-        if (definition.localScale != Vector3.zero)
+        // Instanciar solo si no existe en el pool
+        if (_instantiatedPool[_currentIndex] == null)
         {
-            spawned.transform.localScale = definition.localScale;
+            Transform parent = anchorStage != null ? anchorStage : transform;
+            _instantiatedPool[_currentIndex] = Instantiate(def.prefab, targetPose.position, targetPose.rotation, parent);
         }
 
-        _placedObjectsCounter++;
+        GameObject targetObj = _instantiatedPool[_currentIndex];
+        targetObj.transform.SetPositionAndRotation(targetPose.position, targetPose.rotation);
+        targetObj.transform.localScale = def.baseScale != Vector3.zero ? def.baseScale : Vector3.one;
+        targetObj.SetActive(true);
 
-        if (spawned.TryGetComponent(out Animator animator))
+        _currentActiveInstance = targetObj;
+
+        // Reinicio del árbol de animación para mallas esqueléticas
+        if (_currentActiveInstance.TryGetComponent(out Animator anim))
         {
-            animator.Rebind();
-            animator.Update(0f);
+            anim.Rebind();
+            anim.Update(0f);
         }
-
-        //VuforiaDebugger.Instance?.AddPrint($"Instanciado {_currentObjectType} #{_placedObjectsCounter}", Color.green);
-    }
-
-    public void SetObjectType(int typeIndex)
-    {
-        _currentObjectType = (PlaceableObjectType)typeIndex;
-        //VuforiaDebugger.Instance?.AddPrint($"Selección activa: {_currentObjectType}", Color.cyan);
-    }
-
-    public void SelectCube() => SetObjectType((int)PlaceableObjectType.Cube);
-    public void SelectSphere() => SetObjectType((int)PlaceableObjectType.Sphere);
-
-    private PlaceableDefinition GetDefinition(PlaceableObjectType targetType)
-    {
-        if (placeableDefinitions == null) return default;
-
-        for (int i = 0; i < placeableDefinitions.Length; i++)
+        else
         {
-            if (placeableDefinitions[i].type == targetType)
+            // Búsqueda en hijos si el Animator está en el sub-nodo de la malla
+            var childAnim = _currentActiveInstance.GetComponentInChildren<Animator>();
+            if (childAnim != null)
             {
-                return placeableDefinitions[i];
+                childAnim.Rebind();
+                childAnim.Update(0f);
             }
         }
+    }
 
-        return default;
+    /// <summary>
+    /// Invocar desde los botones de la UI (ej. OnClick -> SetModelIndex(0), SetModelIndex(1))
+    /// </summary>
+    public void SetModelIndex(int newIndex)
+    {
+        if (newIndex < 0 || newIndex >= placeableDefinitions.Length) return;
+        if (newIndex == _currentIndex) return;
+
+        _currentIndex = newIndex;
+
+        // Si ya hay un anclaje colocado en el suelo, permutar el modelo inmediatamente en la misma posición
+        if (_hasPlacedAtLeastOnce)
+        {
+            ApplyPlacement(_lastPlacedPose);
+        }
     }
 
     private bool IsPointerOverUI(Vector2 screenPosition)
@@ -183,7 +185,6 @@ public class ARGroundPlacementController : MonoBehaviour
 
         s_CachedPointerData.position = screenPosition;
         S_UiRaycastResults.Clear();
-
         EventSystem.current.RaycastAll(s_CachedPointerData, S_UiRaycastResults);
 
         return S_UiRaycastResults.Count > 0;
