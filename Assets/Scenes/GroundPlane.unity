@@ -164,8 +164,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f7d7ea1e88ae74d99ce79a6ae71a8a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GroundPlanePlacementActuator
-  _planeFinder: {fileID: 1743335173}
-  _anchorStage: {fileID: 1375160333}
+  _faceCamera: 1
 --- !u!4 &46334103
 Transform:
   m_ObjectHideFlags: 0
@@ -1179,6 +1178,7 @@ GameObject:
   - component: {fileID: 1743335174}
   - component: {fileID: 1743335173}
   - component: {fileID: 1743335172}
+  - component: {fileID: 1743335176}
   m_Layer: 0
   m_Name: Plane Finder
   m_TagString: Untagged
@@ -1220,19 +1220,7 @@ MonoBehaviour:
   Height: 1.4
   OnInteractiveHitTest:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 46334102}
-        m_TargetAssemblyTypeName: GroundPlanePlacementActuator, Assembly-CSharp
-        m_MethodName: PlaceOrUpdateObject
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
   OnAutomaticHitTest:
     m_PersistentCalls:
       m_Calls: []
@@ -1281,6 +1269,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1743335176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1743335171}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f74852230e81447468146fcce925bce9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ARGroundPlacementController
+  anchorStage: {fileID: 1375160333}
+  placeableDefinitions:
+  - type: 0
+    prefab: {fileID: 5487413683769176534, guid: 1fed957f76e437f4e8051e9c08d30eb1, type: 3}
+    localScale: {x: 0.2, y: 0.2, z: 0.2}
+  defaultObjectType: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
